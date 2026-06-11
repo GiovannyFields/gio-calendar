@@ -263,7 +263,6 @@
 
   const pad = n => String(n).padStart(2, "0");
   const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const todayKey = dkey(new Date());
   const status = (msg, keep) => {
     const el = document.getElementById("loadStatus");
     el.textContent = msg; el.classList.add("show");
@@ -305,6 +304,7 @@
       grid.appendChild(el);
     });
 
+    const todayKey = dkey(new Date()); // recomputed so wall displays roll over at midnight
     const y = view.getFullYear(), m = view.getMonth();
     document.getElementById("monthLabel").textContent =
       view.toLocaleString("en-US", { month: "long", year: "numeric" });
@@ -489,6 +489,10 @@
 
   render();   // draw immediately (holidays + frame)
   load();     // then fill with cloud data
+
+  // kiosk mode: refresh data every 15 min; full reload nightly to pick up design updates
+  setInterval(load, 15 * 60 * 1000);
+  setInterval(() => { const h = new Date().getHours(); if (h === 4) location.reload(); }, 55 * 60 * 1000);
 })();
 </script>
 </body>
