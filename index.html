@@ -270,6 +270,7 @@
   };
 
   const isSynced = e => e.source === "D2L" || e.source === "Teamworx";
+  const courseOf = e => (isSynced(e) && e.notes) ? e.notes.replace(/-\d+$/, "") : null; // "CSCI-3020-890" → "CSCI-3020"
   const eventsOn = key => events.filter(e => e.date === key)
       .sort((a,b) => (a.time || "99") < (b.time || "99") ? -1 : 1);
 
@@ -338,7 +339,8 @@
       evts.slice(0, 3).forEach(e => {
         const el = document.createElement("div");
         el.className = "evt " + (e.category || "personal");
-        el.textContent = fmtTime(e.time) + e.title;
+        const crs = courseOf(e);
+        el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
         el.title = e.title + (e.notes ? " — " + e.notes : "");
         el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
         cell.appendChild(el);
@@ -371,7 +373,7 @@
       item.className = "up-item";
       item.innerHTML = `<div class="up-dot" style="background:${colors[e.category] || colors.personal}"></div>
         <div><div>${e.title}</div>
-        <div class="up-date">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${e.time ? " · " + fmtTime(e.time) : ""}</div></div>`;
+        <div class="up-date">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${e.time ? " · " + fmtTime(e.time) : ""}${courseOf(e) ? " · " + courseOf(e) : ""}</div></div>`;
       box.appendChild(item);
     });
   }
