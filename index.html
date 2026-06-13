@@ -69,7 +69,10 @@
   .day:hover { background: #f4eedf; }
   .day.other { background: #f3eee0; }
   .day.other .num { color: #c9bda5; }
+  .day.manual { background: #e3f1da; } /* day holds one of Gio's own events */
+  .day.manual:hover { background: #daebcf; }
   .day.today { background: var(--today-bg); }
+  .day.expanded { overflow: visible; }
   .day .num { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
   .day.today .num {
     background: var(--today-badge); color: #fff; font-weight: 700;
@@ -84,7 +87,8 @@
   .evt.work { background: var(--work-bg); color: var(--work-tx); }
   .evt.personal { background: var(--personal-bg); color: var(--personal-tx); }
   .evt.holiday { background: #f3e2b3; color: #7c5a0d; font-style: italic; cursor: default; }
-  .more { font-size: 0.7rem; color: var(--muted); padding-left: 2px; }
+  .more { font-size: 0.7rem; color: var(--accent); font-weight: 650; padding-left: 2px; cursor: pointer; }
+  .more:hover { text-decoration: underline; }
 
   .card {
     background: var(--panel); border: 1px solid var(--border);
@@ -168,6 +172,7 @@
   .wday.expanded { flex: none; }
   .wday.mini { flex: none; padding: 5px 9px; }
   .wday.mini .dhead { margin-bottom: 0; }
+  .wday.manual { background: #e3f1da; border-color: #a9cd95; }
   .wday.today { background: var(--today-bg); border-color: var(--today-badge); }
   .wday .dhead { font-size: 0.7rem; font-weight: 650; color: var(--muted); margin-bottom: 4px; }
   .wday.today .dhead { color: #8a5a10; }
@@ -361,7 +366,7 @@
       const expanded = expandedKey === key;
       const isMini = expandedKey !== null && !expanded; // another day is expanded → this one shrinks to a header line
       const day = document.createElement("div");
-      day.className = "wday" + (key === todayKey ? " today" : "") + (expanded ? " expanded" : "") + (isMini ? " mini" : "");
+      day.className = "wday" + (evts.some(e => !isSynced(e)) ? " manual" : "") + (key === todayKey ? " today" : "") + (expanded ? " expanded" : "") + (isMini ? " mini" : "");
       const head = document.createElement("div");
       head.className = "dhead";
       head.textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
@@ -423,7 +428,8 @@
     const firstDow = new Date(y, m, 1).getDay();
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const rows = Math.ceil((firstDow + daysInMonth) / 7);
-    grid.style.gridTemplateRows = `auto repeat(${rows}, 1fr)`;
+    grid.style.gridTemplateRows = expandedKey ? `auto repeat(${rows}, auto)` : `auto repeat(${rows}, 1fr)`;
+    grid.style.overflowY = expandedKey ? "auto" : "hidden";
     const start = new Date(y, m, 1);
     start.setDate(1 - start.getDay());
     for (let i = 0; i < rows * 7; i++) {
@@ -446,7 +452,10 @@
       }
 
       const evts = eventsOn(key);
-      evts.slice(0, 3).forEach(e => {
+      const expanded = expandedKey === key;
+      if (evts.some(e => !isSynced(e))) cell.classList.add("manual");
+      if (expanded) cell.classList.add("expanded");
+      evts.slice(0, expanded ? evts.length : 3).forEach(e => {
         const el = document.createElement("div");
         el.className = "evt " + (e.category || "personal");
         const crs = courseOf(e);
@@ -457,7 +466,9 @@
       });
       if (evts.length > 3) {
         const more = document.createElement("div");
-        more.className = "more"; more.textContent = `+${evts.length - 3} more`;
+        more.className = "more";
+        more.textContent = expanded ? "show less ▴" : `+${evts.length - 3} more ▾`;
+        more.onclick = ev => { ev.stopPropagation(); expandedKey = expanded ? null : key; render(); };
         cell.appendChild(more);
       }
       cell.onclick = () => openModal(key, null);
