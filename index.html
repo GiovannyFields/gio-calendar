@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#efe9dc">
+<link rel="manifest" href="manifest.json">
 <title>Gio's Calendar</title>
 <style>
   :root {
@@ -183,7 +185,7 @@
     .tickers { width: 100%; }
   }
   @media (max-width: 700px) {
-    body { height: 100vh; overflow: hidden; padding: 10px; }
+    body { height: 100vh; height: 100dvh; overflow: hidden; padding: 10px; } /* dvh = real visible height, minus the URL bar */
     .layout { flex: 1; min-height: 0; }
     .sidebar { display: none; }
     header { margin-bottom: 8px; gap: 6px; }
