@@ -166,6 +166,8 @@
     padding: 6px 9px; flex: 1; display: flex; flex-direction: column; justify-content: flex-start;
   }
   .wday.expanded { flex: none; }
+  .wday.mini { flex: none; padding: 5px 9px; }
+  .wday.mini .dhead { margin-bottom: 0; }
   .wday.today { background: var(--today-bg); border-color: var(--today-badge); }
   .wday .dhead { font-size: 0.7rem; font-weight: 650; color: var(--muted); margin-bottom: 4px; }
   .wday.today .dhead { color: #8a5a10; }
@@ -351,45 +353,51 @@
     for (let i = 0; i < 7; i++) {
       const d = new Date(start); d.setDate(start.getDate() + i);
       const key = dkey(d);
-      const day = document.createElement("div");
-      day.className = "wday" + (key === todayKey ? " today" : "");
-      const head = document.createElement("div");
-      head.className = "dhead";
-      head.textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + (key === todayKey ? "  ·  Today" : "");
-      day.appendChild(head);
-      if (HOLIDAYS[key]) {
-        const hd = document.createElement("div");
-        hd.className = "evt holiday";
-        hd.textContent = "🎉 " + HOLIDAYS[key];
-        hd.onclick = ev => ev.stopPropagation();
-        day.appendChild(hd);
-      }
       const evts = eventsOn(key);
       const expanded = expandedKey === key;
-      const limit = expanded ? evts.length : 2;
-      if (expanded) day.classList.add("expanded");
-      evts.slice(0, limit).forEach(e => {
-        const el = document.createElement("div");
-        el.className = "evt " + (e.category || "personal");
-        const crs = courseOf(e);
-        el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
-        el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
-        day.appendChild(el);
-      });
-      if (evts.length > 2) {
-        const btn = document.createElement("button");
-        btn.className = "morebtn";
-        btn.textContent = expanded ? "show less ▴" : "+" + (evts.length - limit) + " more ▾";
-        btn.onclick = ev => { ev.stopPropagation(); expandedKey = expanded ? null : key; render(); };
-        day.appendChild(btn);
+      const isMini = expandedKey !== null && !expanded; // another day is expanded → this one shrinks to a header line
+      const day = document.createElement("div");
+      day.className = "wday" + (key === todayKey ? " today" : "") + (expanded ? " expanded" : "") + (isMini ? " mini" : "");
+      const head = document.createElement("div");
+      head.className = "dhead";
+      head.textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
+        + (key === todayKey ? "  ·  Today" : "")
+        + (isMini && evts.length ? "  ·  " + evts.length + " item" + (evts.length === 1 ? "" : "s") : "");
+      day.appendChild(head);
+      if (!isMini) {
+        if (HOLIDAYS[key]) {
+          const hd = document.createElement("div");
+          hd.className = "evt holiday";
+          hd.textContent = "🎉 " + HOLIDAYS[key];
+          hd.onclick = ev => ev.stopPropagation();
+          day.appendChild(hd);
+        }
+        const limit = expanded ? evts.length : 2;
+        evts.slice(0, limit).forEach(e => {
+          const el = document.createElement("div");
+          el.className = "evt " + (e.category || "personal");
+          const crs = courseOf(e);
+          el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
+          el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
+          day.appendChild(el);
+        });
+        if (evts.length > 2) {
+          const btn = document.createElement("button");
+          btn.className = "morebtn";
+          btn.textContent = expanded ? "show less ▴" : "+" + (evts.length - limit) + " more ▾";
+          btn.onclick = ev => { ev.stopPropagation(); expandedKey = expanded ? null : key; render(); };
+          day.appendChild(btn);
+        }
+        if (!evts.length && !HOLIDAYS[key]) {
+          const em = document.createElement("div");
+          em.className = "empty";
+          em.textContent = "tap to add";
+          day.appendChild(em);
+        }
       }
-      if (!evts.length && !HOLIDAYS[key]) {
-        const em = document.createElement("div");
-        em.className = "empty";
-        em.textContent = "tap to add";
-        day.appendChild(em);
-      }
-      day.onclick = () => openModal(key, null);
+      day.onclick = isMini
+        ? () => { expandedKey = key; render(); }   // tap a shrunken day to expand it instead
+        : () => openModal(key, null);
       grid.appendChild(day);
     }
   }
