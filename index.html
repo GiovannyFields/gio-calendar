@@ -156,15 +156,23 @@
   #loadStatus.show { opacity: 1; }
   /* mobile week view */
   .weeklist {
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 6px;
     flex: 1; min-height: 0; overflow-y: auto;
   }
-  .wday { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; }
+  .wday {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 6px 9px; flex: 1; display: flex; flex-direction: column; justify-content: flex-start;
+  }
+  .wday.expanded { flex: none; }
   .wday.today { background: var(--today-bg); border-color: var(--today-badge); }
-  .wday .dhead { font-size: 0.8rem; font-weight: 650; color: var(--muted); margin-bottom: 6px; }
+  .wday .dhead { font-size: 0.7rem; font-weight: 650; color: var(--muted); margin-bottom: 4px; }
   .wday.today .dhead { color: #8a5a10; }
-  .weeklist .evt { white-space: normal; font-size: 0.82rem; padding: 5px 8px; }
-  .wday .empty { font-size: 0.75rem; color: var(--muted); }
+  .weeklist .evt { white-space: normal; font-size: 0.72rem; padding: 3px 7px; margin-bottom: 2px; }
+  .wday .empty { font-size: 0.7rem; color: var(--muted); }
+  .morebtn {
+    background: none; border: none; color: var(--accent); font-size: 0.72rem; font-weight: 650;
+    text-align: left; padding: 2px 0 0; cursor: pointer; width: fit-content;
+  }
 
   @media (max-width: 980px) {
     body { height: auto; overflow: auto; }
@@ -282,6 +290,7 @@
   let briefing = { updated: null, stocks: [], news: [] };
   let view = new Date();
   let editingId = null;
+  let expandedKey = null; // mobile: which day is expanded
 
   const pad = n => String(n).padStart(2, "0");
   const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -354,7 +363,10 @@
         day.appendChild(hd);
       }
       const evts = eventsOn(key);
-      evts.forEach(e => {
+      const expanded = expandedKey === key;
+      const limit = expanded ? evts.length : 2;
+      if (expanded) day.classList.add("expanded");
+      evts.slice(0, limit).forEach(e => {
         const el = document.createElement("div");
         el.className = "evt " + (e.category || "personal");
         const crs = courseOf(e);
@@ -362,10 +374,17 @@
         el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
         day.appendChild(el);
       });
+      if (evts.length > 2) {
+        const btn = document.createElement("button");
+        btn.className = "morebtn";
+        btn.textContent = expanded ? "show less ▴" : "+" + (evts.length - limit) + " more ▾";
+        btn.onclick = ev => { ev.stopPropagation(); expandedKey = expanded ? null : key; render(); };
+        day.appendChild(btn);
+      }
       if (!evts.length && !HOLIDAYS[key]) {
         const em = document.createElement("div");
         em.className = "empty";
-        em.textContent = "Nothing scheduled — tap to add";
+        em.textContent = "tap to add";
         day.appendChild(em);
       }
       day.onclick = () => openModal(key, null);
