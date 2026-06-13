@@ -171,7 +171,8 @@
   .wday.today { background: var(--today-bg); border-color: var(--today-badge); }
   .wday .dhead { font-size: 0.7rem; font-weight: 650; color: var(--muted); margin-bottom: 4px; }
   .wday.today .dhead { color: #8a5a10; }
-  .weeklist .evt { white-space: normal; font-size: 0.72rem; padding: 3px 7px; margin-bottom: 2px; }
+  .weeklist .evt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.72rem; padding: 3px 7px; margin-bottom: 2px; }
+  .wday.expanded .evt { white-space: normal; }
   .wday .empty { font-size: 0.7rem; color: var(--muted); }
   .morebtn {
     background: none; border: none; color: var(--accent); font-size: 0.72rem; font-weight: 650;
@@ -350,6 +351,9 @@
     const end = new Date(start); end.setDate(start.getDate() + 6);
     const f = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     document.getElementById("monthLabel").textContent = f(start) + " – " + f(end);
+    let weekTotal = 0;
+    for (let i = 0; i < 7; i++) { const t = new Date(start); t.setDate(start.getDate() + i); weekTotal += eventsOn(dkey(t)).length; }
+    const baseLimit = weekTotal > 12 ? 1 : 2; // busy weeks collapse to 1 line per day so everything fits
     for (let i = 0; i < 7; i++) {
       const d = new Date(start); d.setDate(start.getDate() + i);
       const key = dkey(d);
@@ -372,7 +376,7 @@
           hd.onclick = ev => ev.stopPropagation();
           day.appendChild(hd);
         }
-        const limit = expanded ? evts.length : 2;
+        const limit = expanded ? evts.length : baseLimit;
         evts.slice(0, limit).forEach(e => {
           const el = document.createElement("div");
           el.className = "evt " + (e.category || "personal");
@@ -381,7 +385,7 @@
           el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
           day.appendChild(el);
         });
-        if (evts.length > 2) {
+        if (evts.length > baseLimit) {
           const btn = document.createElement("button");
           btn.className = "morebtn";
           btn.textContent = expanded ? "show less ▴" : "+" + (evts.length - limit) + " more ▾";
