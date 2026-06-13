@@ -154,6 +154,18 @@
     opacity: 0; transition: opacity .3s; pointer-events: none;
   }
   #loadStatus.show { opacity: 1; }
+  /* mobile week view */
+  .weeklist {
+    display: flex; flex-direction: column; gap: 8px;
+    flex: 1; min-height: 0; overflow-y: auto;
+  }
+  .wday { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; }
+  .wday.today { background: var(--today-bg); border-color: var(--today-badge); }
+  .wday .dhead { font-size: 0.8rem; font-weight: 650; color: var(--muted); margin-bottom: 6px; }
+  .wday.today .dhead { color: #8a5a10; }
+  .weeklist .evt { white-space: normal; font-size: 0.82rem; padding: 5px 8px; }
+  .wday .empty { font-size: 0.75rem; color: var(--muted); }
+
   @media (max-width: 980px) {
     body { height: auto; overflow: auto; }
     .layout { flex-direction: column; height: auto; }
@@ -161,6 +173,17 @@
     .day { min-height: 100px; }
     header { display: flex; flex-direction: column; gap: 8px; }
     .tickers { width: 100%; }
+  }
+  @media (max-width: 700px) {
+    body { height: 100vh; overflow: hidden; padding: 10px; }
+    .layout { flex: 1; min-height: 0; }
+    .sidebar { display: none; }
+    header { margin-bottom: 8px; gap: 6px; }
+    h1 { font-size: 1.2rem; }
+    .tickers { margin-top: 10px; gap: 6px; }
+    .ticker-row { height: 38px; }
+    .ticker-label { font-size: 0.7rem; padding: 0 10px; }
+    .t-item { font-size: 0.82rem; padding: 0 14px; }
   }
 </style>
 </head>
@@ -258,7 +281,6 @@
   let events = [];
   let briefing = { updated: null, stocks: [], news: [] };
   let view = new Date();
-  view.setDate(1);
   let editingId = null;
 
   const pad = n => String(n).padStart(2, "0");
@@ -296,7 +318,62 @@
     render();
   }
 
+  const isMobile = () => window.matchMedia("(max-width: 700px)").matches;
+
   function render() {
+    document.getElementById("grid").className = isMobile() ? "weeklist" : "grid";
+    (isMobile() ? renderWeek : renderMonth)();
+    renderUpcoming();
+    renderBriefing();
+    renderSync();
+  }
+
+  function renderWeek() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    grid.style.gridTemplateRows = "";
+    const todayKey = dkey(new Date());
+    const start = new Date(view); start.setDate(view.getDate() - view.getDay());
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const f = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    document.getElementById("monthLabel").textContent = f(start) + " – " + f(end);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const key = dkey(d);
+      const day = document.createElement("div");
+      day.className = "wday" + (key === todayKey ? " today" : "");
+      const head = document.createElement("div");
+      head.className = "dhead";
+      head.textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + (key === todayKey ? "  ·  Today" : "");
+      day.appendChild(head);
+      if (HOLIDAYS[key]) {
+        const hd = document.createElement("div");
+        hd.className = "evt holiday";
+        hd.textContent = "🎉 " + HOLIDAYS[key];
+        hd.onclick = ev => ev.stopPropagation();
+        day.appendChild(hd);
+      }
+      const evts = eventsOn(key);
+      evts.forEach(e => {
+        const el = document.createElement("div");
+        el.className = "evt " + (e.category || "personal");
+        const crs = courseOf(e);
+        el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
+        el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
+        day.appendChild(el);
+      });
+      if (!evts.length && !HOLIDAYS[key]) {
+        const em = document.createElement("div");
+        em.className = "empty";
+        em.textContent = "Nothing scheduled — tap to add";
+        day.appendChild(em);
+      }
+      day.onclick = () => openModal(key, null);
+      grid.appendChild(day);
+    }
+  }
+
+  function renderMonth() {
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
     ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d => {
@@ -353,9 +430,6 @@
       cell.onclick = () => openModal(key, null);
       grid.appendChild(cell);
     }
-    renderUpcoming();
-    renderBriefing();
-    renderSync();
   }
 
   function renderUpcoming() {
@@ -485,9 +559,15 @@
     render();
   };
 
-  document.getElementById("prevBtn").onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
-  document.getElementById("nextBtn").onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
-  document.getElementById("todayBtn").onclick = () => { view = new Date(); view.setDate(1); render(); };
+  const step = dir => {
+    if (isMobile()) view.setDate(view.getDate() + dir * 7);
+    else { view.setDate(1); view.setMonth(view.getMonth() + dir); }
+    render();
+  };
+  document.getElementById("prevBtn").onclick = () => step(-1);
+  document.getElementById("nextBtn").onclick = () => step(1);
+  document.getElementById("todayBtn").onclick = () => { view = new Date(); render(); };
+  window.matchMedia("(max-width: 700px)").addEventListener("change", render);
 
   render();   // draw immediately (holidays + frame)
   load();     // then fill with cloud data
