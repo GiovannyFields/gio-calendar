@@ -95,6 +95,8 @@
   .evt.work { background: var(--work-bg); color: var(--work-tx); }
   .evt.personal { background: var(--personal-bg); color: var(--personal-tx); }
   .evt.holiday { background: #f3e2b3; color: #7c5a0d; font-style: italic; cursor: default; }
+  .evt.done { opacity: .5; text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .up-item.done .up-title { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .55; }
   .more { font-size: 0.7rem; color: var(--accent); font-weight: 650; padding-left: 2px; cursor: pointer; }
   .more:hover { text-decoration: underline; }
 
@@ -392,7 +394,7 @@
         const limit = expanded ? evts.length : baseLimit;
         evts.slice(0, limit).forEach(e => {
           const el = document.createElement("div");
-          el.className = "evt " + (e.category || "personal");
+          el.className = "evt " + (e.category || "personal") + (e.completed ? " done" : "");
           const crs = courseOf(e);
           el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
           el.onclick = ev => { ev.stopPropagation(); openModal(key, e); };
@@ -462,7 +464,7 @@
       if (evts.some(e => !isSynced(e))) cell.classList.add("manual");
       evts.slice(0, 3).forEach(e => {
         const el = document.createElement("div");
-        el.className = "evt " + (e.category || "personal");
+        el.className = "evt " + (e.category || "personal") + (e.completed ? " done" : "");
         const crs = courseOf(e);
         el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
         el.title = e.title + (e.notes ? " — " + e.notes : "");
@@ -493,9 +495,9 @@
     list.slice(0, 10).forEach(e => {
       const d = new Date(e.date + "T00:00");
       const item = document.createElement("div");
-      item.className = "up-item";
+      item.className = "up-item" + (e.completed ? " done" : "");
       item.innerHTML = `<div class="up-dot" style="background:${colors[e.category] || colors.personal}"></div>
-        <div><div>${e.title}</div>
+        <div><div class="up-title">${e.title}</div>
         <div class="up-date">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${e.time ? " · " + fmtTime(e.time) : ""}${courseOf(e) ? " · " + courseOf(e) : ""}</div></div>`;
       box.appendChild(item);
     });
@@ -545,7 +547,7 @@
     pop.appendChild(h);
     evts.forEach(e => {
       const el = document.createElement("div");
-      el.className = "evt " + (e.category || "personal");
+      el.className = "evt " + (e.category || "personal") + (e.completed ? " done" : "");
       const crs = courseOf(e);
       el.textContent = fmtTime(e.time) + (crs ? crs + " · " : "") + e.title;
       el.onclick = ev => { ev.stopPropagation(); closeDayPop(); openModal(key, e); };
@@ -577,7 +579,8 @@
       document.getElementById("fNotes").value = evt.notes || "";
       if (isSynced(evt)) {
         document.getElementById("srcTag").innerHTML =
-          `<span class="src-tag">🔄 Auto-synced from ${evt.source}</span>`;
+          `<span class="src-tag">🔄 Auto-synced from ${evt.source}</span>` +
+          (evt.completed ? ` <span class="src-tag" style="color:#2e5e2a">✓ Completed</span>` : "");
         document.getElementById("saveBtn").style.display = "none";
       } else {
         editingId = evt.id;
